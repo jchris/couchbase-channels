@@ -50,6 +50,9 @@ function finished(name) {
 
 };
 
+// test that a device doc is 
+start("")
+
 // test that a new channel doc gets made ready and a database is created for it
 start("create a new channel");
 couch.db.destroy(db_name, function(err, resp) {
@@ -91,7 +94,6 @@ couch.db.destroy(db_name, function(err, resp) {
         }
     })    
 });
-
 
 
 
