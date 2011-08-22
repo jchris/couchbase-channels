@@ -5,15 +5,18 @@ var follow = require("follow")
 exports.connect = function(db_host, db_name) {
     var feed = new follow.Feed({db : [db_host, db_name].join('/')})
         , safeMachine, safeStates = {}
+        , cautiousMachine, unsafeStates = {}
         ;
     
     feed.include_docs = true;
     feed.on("change", function(change) {
         safeMachine.handle(change.doc);
+        cautiousMachine.handle(change.doc);
     });
     
     function start() {
         safeMachine = stately.define(safeStates);
+        cautiousMachine = stately.define(unsafeStates);
         feed.follow();
     }
     
@@ -22,7 +25,10 @@ exports.connect = function(db_host, db_name) {
         safeStates[type][state] = cb;
     }
     
-    function registerUnsafeCallback(type, state, cb) {}
+    function registerUnsafeCallback(type, state, cb) {
+        unsafeStates[type] = unsafeStates[type] || {};
+        unsafeStates[type][state] = cb;
+    }
     
     return {
         start : start,

@@ -45,22 +45,22 @@ function handleChannels(control, db, server) {
     });
 };
 
+function sendEmail(address, code, cb) {
+    console.warn("not actually sending an email", address, code)
+    cb(false);
+}
+
+
 function handleDevices(control, db, server) {
     control.unsafe("device", "new", function(doc) {
-      var confirm_code = uuid();
-      ensureUserExists(doc.owner, function(err) {
+      var confirm_code = Math.random().toString().split('.').pop();
+      sendEmail(doc.owner, confirm_code, function(err) {
         if (err) {
           errLog(err)
         } else {
-          sendEmail(doc.owner, confirm_code, function(err) {
-            if (err) {
-              errLog(err)
-            } else {
-              doc.state = "confirming";
-              doc.confirm_code = confirm_code;
-              db.save(doc, errLog);      
-            }
-          });   
+          doc.state = "confirming";
+          doc.confirm_code = confirm_code;
+          db.insert(doc, errLog);      
         }
       });
     });
