@@ -136,6 +136,8 @@ fixtureDb(function() {
             });
             feed2.follow();
             start("confirm device user")
+            // we are testing that if you create a clicked confirm doc that matches the code,
+            // your device will be activated
             db.insert({
                 type : "confirm",
                 state : "clicked",
