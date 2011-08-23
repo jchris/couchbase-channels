@@ -5,6 +5,27 @@ var assert = require("assert")
     , follow = require("follow")
     ;
 
+// mini test framework
+var testNames = {};
+function start(name) {
+    console.log("start", name)
+    testNames[name] = new Date();
+};
+function finish(name) {
+    var start = testNames[name];
+    delete testNames[name];
+    console.log("finish", name, new Date() - start);
+    if (Object.keys(testNames).length == 0) {
+        setTimeout(function() {
+            if (Object.keys(testNames).length == 0) {
+                console.log("all tests done")
+                process.exit(0)
+            }
+        }, 50);
+    }
+};
+// end mini test framework
+
 var user_email = 'drspaceman@30rock.com';
 
 function userTag(doc) {
@@ -32,27 +53,13 @@ var db_host = "http://jchrisa:jchrisa@127.0.0.1:5984"
     , db_name = "test-control"
     , couch = nano(db_host)
     , db = couch.use(db_name)
+    , userDb = couch.use("_users") // todo the tests should use a test user db
     ;
 
-var testNames = {};
-function start(name) {
-    console.log("start", name)
-    testNames[name] = new Date();
-};
-function finished(name) {
-    var start = testNames[name];
-    delete testNames[name];
-    console.log(name, new Date() - start);
-    if (Object.keys(testNames).length == 0) {
-        setTimeout(function() {
-            if (Object.keys(testNames).length == 0) {
-                console.log("all tests done")
-                process.exit(0)
-            }
-        }, 50);
-    }
-
-};
+userDb.get("org.couchdb.user:"+user_email, function(err, r, doc) {
+    assert.ok(!err)
+    userDb.destroy(doc._id, doc._rev, errLog)
+});
 
 function fixtureDb(fun) {
     couch.db.destroy(db_name, function(err, resp) {
@@ -72,18 +79,21 @@ fixtureDb(function() {
     // start cloud server
     cloud.start(db_host, db_name);
     start("send new device email");
+
     // create a new device doc
+    // this would ordinarily be done by the device UI on first launch
     db.insert({
         owner : user_email,
         type : "device",
         state : "new",
-        device_key : "random"
+        device_key : "randomly"
     }, errLog);
     
     var feed = new follow.Feed({db : [db_host, db_name].join('/')});
     feed.since = 0;
     feed.include_docs = true;
     feed.on('error', function() {});
+    var confirm_code;
     feed.on('change', function(change) {
         // wait for states to change
         // console.log("change", change)
@@ -94,9 +104,11 @@ fixtureDb(function() {
             assert.ok(doc.state == "new")
         break;
         case 2:
+            // when we see a new device we email the owner
             assert.ok(doc.type == "device")
             assert.ok(doc.state == "confirming")
-            finished("send new device email");
+            confirm_code = doc.confirm_code;
+            finish("send new device email");
             // next test
             start("create a new channel");
             db.insert(userTag({
@@ -110,46 +122,37 @@ fixtureDb(function() {
             assert.ok(doc.state == "new")
         break;
         case 4:
-            assert.ok(change.doc.state == "ready");
-            feed2 = new follow.Feed({db : change.doc.syncpoint, include_docs : true})
+            assert.ok(doc.type == "channel")
+            assert.ok(doc.state == "ready");
+            feed2 = new follow.Feed({db : doc.syncpoint, include_docs : true})
             feed2.on('error', function() {});
             feed2.on('change', function(change) {
                 if (change.id == "description") {
                     // assert that the db exists and it contains a description doc
                     assert.ok(change.doc.name ==  "My Channel Name")
-                    finished("create a new channel");
+                    finish("create a new channel");
                 }
             });
             feed2.follow();
+            start("confirm device user")
+            db.insert({
+                type : "confirm",
+                state : "clicked",
+                confirm_code : confirm_code
+            }, errLog);
+        break;
+        case 6:
+            assert.ok(doc.type == "device")
+            assert.ok(doc.state == "active")
+            assert.ok(doc.confirm_code == confirm_code)
+            var userDb = couch.use("_users");
+            userDb.get("org.couchdb.user:"+user_email, function(err, r, doc) {
+                assert.ok(!err)
+                assert.equal(doc.delegates[0], "randomly");
+                finish("confirm device user")
+            });
         break;
         }
-        // if (change.seq == 2) {
-        //     assert.ok(change.doc.state == "ready");
-        //     feed2 = new follow.Feed({db : change.doc.syncpoint})
-        //     feed2.on('error', function() {});
-        //     feed2.on('change', function(change) {
-        //         if (change.id == "description") {
-        //             // assert that the db exists and it contains a description doc
-        //             assert.ok(true)
-        //             finished("create a new channel");
-        //         }
-        //     });
-        //     feed2.follow();
-        // }
-    });
-    feed.follow();
-
-    // create a new channel
-
-    var feed = new follow.Feed({db : [db_host, db_name].join('/')});
-    feed.since = 0;
-    feed.include_docs = true;
-    feed.on('error', function() {});
-    feed.on('change', function(change) {
-        // wait for channel doc to become ready
-        if (change.seq == 1) {
-        }
-
     });
     feed.follow();
 });
