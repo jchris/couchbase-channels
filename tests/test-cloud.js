@@ -58,6 +58,7 @@ var db_host = "http://jchrisa:jchrisa@127.0.0.1:5984"
 
 userDb.get("org.couchdb.user:"+user_email, function(err, r, doc) {
     assert.ok(!err)
+    // it's OK to do this out of order as we are not counting seq's in the users db
     userDb.destroy(doc._id, doc._rev, errLog)
 });
 
