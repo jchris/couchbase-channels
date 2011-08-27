@@ -90,12 +90,14 @@ function handleDevices(control, db, server) {
     var userDb = server.use("_users");
     control.safe("confirm","clicked", function(doc) {
         var confirm_code = doc.confirm_code;
+        var device_code = doc.device_code;
         // load the device doc with confirm_code == code
         // TODO use a real view
         db.list({include_docs:true}, function(err, r, view) {
             var deviceDoc;
             view.rows.forEach(function(row) {
                if (row.doc.confirm_code && row.doc.confirm_code == confirm_code &&
+                   row.doc.device_code && row.doc.device_code == device_code &&
                    row.doc.type && row.doc.type == "device") {
                    deviceDoc = row.doc;
                }

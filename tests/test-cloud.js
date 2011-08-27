@@ -88,6 +88,7 @@ fixtureDb(function() {
         owner : user_email,
         type : "device",
         state : "new",
+        device_code : "random-code",
         oauth_creds : {
         // TODO test that duplicate keys or tokens result in an error, not an overwrite
           consumer_key: "randConsumerKey",
@@ -101,7 +102,7 @@ fixtureDb(function() {
     feed.since = 0;
     feed.include_docs = true;
     feed.on('error', function() {});
-    var confirm_code;
+    var confirm_code, device_code;
     feed.on('change', function(change) {
         // wait for states to change
         // console.log("change", change)
@@ -116,6 +117,7 @@ fixtureDb(function() {
             assert.ok(doc.type == "device")
             assert.ok(doc.state == "confirming")
             confirm_code = doc.confirm_code;
+            device_code = doc.device_code;
             finish("send new device email");
             // next test
             start("create a new channel");
@@ -148,7 +150,8 @@ fixtureDb(function() {
             db.insert({
                 type : "confirm",
                 state : "clicked",
-                confirm_code : confirm_code
+                confirm_code : confirm_code,
+                device_code : device_code
             }, errLog);
         break;
         case 6:
