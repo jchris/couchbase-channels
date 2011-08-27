@@ -46,6 +46,31 @@ function ensureUserDoc(userDb, name, fun) {
     });
 }
 
+function setOAuthConfig(userDoc, id, creds, server, cb) {
+    var rc = 0, ops = [
+        ["oauth_consumer_secrets", creds.consumer_key, creds.consumer_secret],
+        ["oauth_token_users", creds.token, userDoc.name],
+        ["oauth_token_secrets", creds.token, creds.token_secret]
+    ];
+    for (var i=0; i < ops.length; i++) {
+        var op = ops[i];
+        server.request({
+            method : "PUT",
+            db : "_config", doc : op[0], att : op[1], body : op[2]
+        }, function(err) {
+            if (err) {
+                cb(err)
+            } else {
+                rc += 1;
+                if (rc == ops.length) {
+                    cb(false)
+                }
+            }
+        });
+    };
+}
+
+
 function applyOAuth(userDoc, id, creds) {
     userDoc.oauth = userDoc.oauth || {
         consumer_keys : {},
@@ -83,8 +108,13 @@ function handleDevices(control, db, server) {
                   if (err) {
                     errLog(err, doc.owner)
                   } else {
-                    deviceDoc.state = "active";
-                    db.insert(deviceDoc, errLog);
+                      // set the config that we need with oauth user doc capability
+    setOAuthConfig(userDoc, deviceDoc._id, deviceDoc.oauth_creds, server, function(err) {
+                        if (!err) {
+                            deviceDoc.state = "active";
+                            db.insert(deviceDoc, errLog);
+                        }
+                    });
                   }
                 })
             });

@@ -160,7 +160,22 @@ fixtureDb(function() {
                 assert.ok(!err)
                 assert.equal(doc.oauth.consumer_keys["randConsumerKey"], "consumerSecret");
                 assert.equal(doc.oauth.tokens["randToken"], "tokenSecret");
-                finish("confirm device user")
+                
+                couch.request({
+                    db : "_config",
+                }, function(err, resp, data) {
+                    // these assertions can go away once
+                    // https://github.com/fdmanana/couchdb/compare/oauth_users_db
+                    // is merged.
+                    assert.ok(!err)
+                    assert.ok(data.oauth_consumer_secrets)
+                    assert.ok(data.oauth_token_users)
+                    assert.ok(data.oauth_token_secrets)
+            assert.equal(data.oauth_consumer_secrets["randConsumerKey"], "consumerSecret");
+            assert.equal(data.oauth_token_users["randToken"], user_email);
+            assert.equal(data.oauth_token_secrets["randToken"], "tokenSecret");
+                    finish("confirm device user")
+                });
             });
         break;
         }
