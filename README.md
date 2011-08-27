@@ -47,9 +47,14 @@ The goal is to keep your call backs for each individual state as small as possib
 ## TODO: Basically Everything
 
 * refactor code for readability
+* package some of the libraries in a proper npm embedded way (maybe docstate just rides with stately)
 * come up with a better way to test it
 * spec out the remaining doc workflows
 * build the parts the depend on being in an app 
     (or document the API the app must meet)
 
 ## License: 
+
+Apache 2.0
+copyright 2011 Couchbase Inc
+author Chris Anderson jchris@couchbase.com
