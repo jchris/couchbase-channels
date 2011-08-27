@@ -88,7 +88,13 @@ fixtureDb(function() {
         owner : user_email,
         type : "device",
         state : "new",
-        device_key : "randomly"
+        oauth_creds : {
+        // TODO test that duplicate keys or tokens result in an error, not an overwrite
+          consumer_key: "randConsumerKey",
+          consumer_secret: "consumerSecret",
+          token_secret: "tokenSecret",
+          token: "randToken"
+        }
     }, errLog);
     
     var feed = new follow.Feed({db : [db_host, db_name].join('/')});
@@ -152,7 +158,8 @@ fixtureDb(function() {
             var userDb = couch.use("_users");
             userDb.get("org.couchdb.user:"+user_email, function(err, r, doc) {
                 assert.ok(!err)
-                assert.equal(doc.delegates[0], "randomly");
+                assert.equal(doc.oauth.consumer_keys["randConsumerKey"], "consumerSecret");
+                assert.equal(doc.oauth.tokens["randToken"], "tokenSecret");
                 finish("confirm device user")
             });
         break;

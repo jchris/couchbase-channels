@@ -46,6 +46,20 @@ function ensureUserDoc(userDb, name, fun) {
     });
 }
 
+function applyOAuth(userDoc, id, creds) {
+    userDoc.oauth = userDoc.oauth || {
+        consumer_keys : {},
+        tokens : {},
+    };
+    userDoc.oauth.devices = userDoc.oauth.devices || {};
+    if (userDoc.oauth.consumer_keys[creds.consumer_key] || userDoc.oauth.tokens[creds.token]) {
+        throw({error : "token_used", message : "device_id "+id})
+    }
+    userDoc.oauth.devices[id] = [creds.consumer_key, creds.token];
+    userDoc.oauth.consumer_keys[creds.consumer_key] = creds.consumer_secret;
+    userDoc.oauth.tokens[creds.token] = creds.token_secret;
+    return userDoc;
+};
 
 function handleDevices(control, db, server) {
     var userDb = server.use("_users");
@@ -62,11 +76,9 @@ function handleDevices(control, db, server) {
                }
             });
             // now we need to ensure the user exists and make sure the device has a delegate on it
-            var device_key = deviceDoc.device_key;
             // move device_creds to user document, now the device can use them to auth as the user
             ensureUserDoc(userDb, deviceDoc.owner, function(err, userDoc) {
-                userDoc.delegates = userDoc.delegates || [];
-                userDoc.delegates.push(deviceDoc.device_key);
+                userDoc = applyOAuth(userDoc, deviceDoc._id, deviceDoc.oauth_creds);
                 userDb.insert(userDoc, function(err) {
                   if (err) {
                     errLog(err, doc.owner)
