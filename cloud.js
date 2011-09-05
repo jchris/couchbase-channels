@@ -40,7 +40,6 @@ function ensureUserDoc(userDb, name, fun) {
                 roles : []
             });
         } else {
-            console.log(userDoc)
             fun(false, userDoc);
         }
     });
@@ -102,11 +101,17 @@ function handleDevices(control, db, server) {
                    deviceDoc = row.doc;
                }
             });
-            deviceDoc.state = "confirmed";
-            db.insert(deviceDoc, function(err, ok) {
-                doc.state = "used";
+            if (deviceDoc) {
+                deviceDoc.state = "confirmed";
+                db.insert(deviceDoc, function(err, ok) {
+                    doc.state = "used";
+                    db.insert(doc, errLog);
+                });
+            } else {
+                doc.state = "error";
+                doc.error = "no matching device";
                 db.insert(doc, errLog);
-            });
+            }
         });
     });
 
