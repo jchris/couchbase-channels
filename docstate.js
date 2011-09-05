@@ -10,6 +10,8 @@ exports.connect = function(db_host, db_name) {
     
     feed.include_docs = true;
     feed.on("change", function(change) {
+        if (change.doc.type && change.doc.state) 
+            console.log(change.doc.type, change.doc.state)
         safeMachine.handle(change.doc);
         cautiousMachine.handle(change.doc);
     });

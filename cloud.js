@@ -102,24 +102,32 @@ function handleDevices(control, db, server) {
                    deviceDoc = row.doc;
                }
             });
-            // now we need to ensure the user exists and make sure the device has a delegate on it
-            // move device_creds to user document, now the device can use them to auth as the user
-            ensureUserDoc(userDb, deviceDoc.owner, function(err, userDoc) {
-                userDoc = applyOAuth(userDoc, deviceDoc._id, deviceDoc.oauth_creds);
-                userDb.insert(userDoc, function(err) {
-                  if (err) {
-                    errLog(err, doc.owner)
-                  } else {
-                      // set the config that we need with oauth user doc capability
-    setOAuthConfig(userDoc, deviceDoc._id, deviceDoc.oauth_creds, server, function(err) {
-                        if (!err) {
-                            deviceDoc.state = "active";
-                            db.insert(deviceDoc, errLog);
-                        }
-                    });
-                  }
-                })
+            deviceDoc.state = "confirmed";
+            db.insert(deviceDoc, function(err, ok) {
+                doc.state = "used";
+                db.insert(doc, errLog);
             });
+        });
+    });
+
+    control.safe("device", "confirmed", function(deviceDoc) {
+        // now we need to ensure the user exists and make sure the device has a delegate on it
+        // move device_creds to user document, now the device can use them to auth as the user
+        ensureUserDoc(userDb, deviceDoc.owner, function(err, userDoc) {
+            userDoc = applyOAuth(userDoc, deviceDoc._id, deviceDoc.oauth_creds);
+            userDb.insert(userDoc, function(err) {
+              if (err) {
+                errLog(err, deviceDoc.owner)
+              } else {
+                  // set the config that we need with oauth user doc capability
+    setOAuthConfig(userDoc, deviceDoc._id, deviceDoc.oauth_creds, server, function(err) {
+                    if (!err) {
+                        deviceDoc.state = "active";
+                        db.insert(deviceDoc, errLog);
+                    }
+                });
+              }
+            })
         });
     });
 
